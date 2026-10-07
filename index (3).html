@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Finanças">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#2563eb">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Finanças do Casal</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#14161a;--mut:#6b7280;--ac:#2563eb;--in:#16a34a;--out:#dc2626;--bd:#e5e7eb}
+@media(prefers-color-scheme:dark){:root{--bg:#0f1114;--card:#1a1d22;--tx:#f3f4f6;--mut:#9ca3af;--ac:#3b82f6;--in:#22c55e;--out:#f87171;--bd:#2a2e35}}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0 auto;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,system-ui,"Segoe UI",sans-serif;max-width:560px;padding:calc(12px + env(safe-area-inset-top,0px)) 14px calc(90px + env(safe-area-inset-bottom,0px))}
+h1{font-size:22px;margin:6px 0 8px}
+.mn{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.mn b{font-size:17px;text-transform:capitalize}
+.mn button{width:42px;height:42px;border-radius:12px;border:1px solid var(--bd);background:var(--card);color:var(--tx);font-size:20px}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:12px;margin-bottom:10px}
+.cur{font-size:12px;color:var(--mut);font-weight:700;margin-bottom:4px}
+.row3{display:flex;gap:8px}.row3>div{flex:1}
+.l{font-size:12px;color:var(--mut)}.v{font-weight:700;font-size:16px}
+.in{color:var(--in)}.out{color:var(--out)}
+.cat{margin:6px 0}.cat .t{display:flex;justify-content:space-between;font-size:14px}
+.bar{height:6px;background:var(--bd);border-radius:4px;overflow:hidden;margin-top:3px}.bar i{display:block;height:100%;background:var(--out)}
+.tx{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)}
+.tx:last-child{border:0}.tx .i{flex:1;min-width:0}.tx .d{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tx .s{font-size:13px;color:var(--mut)}.tx .x{border:0;background:none;color:var(--mut);font-size:18px;padding:6px}
+.fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));width:58px;height:58px;border-radius:50%;border:0;background:var(--ac);color:#fff;font-size:30px;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.sh{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:flex-end;justify-content:center}.sh.on{display:flex}
+.fm{background:var(--card);width:100%;max-width:560px;border-radius:18px 18px 0 0;padding:16px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+.seg{display:flex;gap:6px;margin-bottom:10px}.seg button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font-size:15px}
+.seg button.on.r{background:var(--in);color:#fff;border-color:var(--in)}.seg button.on.g{background:var(--out);color:#fff;border-color:var(--out)}.seg button.on.m{background:var(--ac);color:#fff;border-color:var(--ac)}
+input,select{width:100%;padding:11px;margin-bottom:8px;border-radius:10px;border:1px solid var(--bd);background:var(--bg);color:var(--tx);font-size:16px}
+.go{width:100%;padding:13px;border:0;border-radius:12px;background:var(--ac);color:#fff;font-size:16px;font-weight:700}
+.sm{display:flex;gap:8px;margin-top:14px}.sm button{flex:1;padding:10px;border-radius:10px;border:1px solid var(--bd);background:var(--card);color:var(--mut);font-size:13px}
+.em{text-align:center;color:var(--mut);padding:18px}
+.bn{background:var(--card);border:1px solid var(--out);color:var(--out);border-radius:12px;padding:10px;margin-bottom:10px;font-size:14px;display:none}
+#login{display:none;margin-top:12vh}
+#app{display:none}
+</style>
+</head>
+<body>
+<div id="login">
+ <h1>💰 Finanças do Casal</h1>
+ <div class="bn" id="lerr"></div>
+ <div class="card">
+  <input id="em" type="email" autocomplete="username" placeholder="E-mail">
+  <input id="pw" type="password" autocomplete="current-password" placeholder="Senha">
+  <button class="go" id="lgo">Entrar</button>
+ </div>
+</div>
+<div id="app">
+ <h1>💰 Finanças do Casal</h1>
+ <div class="bn" id="bn"></div>
+ <div class="mn"><button id="prev">‹</button><b id="mt"></b><button id="next">›</button></div>
+ <div class="seg"><button id="fa" class="on m">Todos</button><button id="fm">Só meus</button></div>
+ <div id="sum"></div>
+ <div class="card" id="cats" style="display:none"></div>
+ <div class="card" id="list"><div class="em">Carregando…</div></div>
+ <div class="sm"><button id="imp">Importar backup antigo</button><button id="out">Sair</button></div>
+ <button class="fab" id="fab" aria-label="Novo lançamento">+</button>
+ <div class="sh" id="sh"><div class="fm">
+  <div class="seg"><button id="bg" class="on g">Gasto</button><button id="br">Recebimento</button></div>
+  <input id="vl" type="number" inputmode="decimal" step="0.01" placeholder="Valor">
+  <input id="ds" type="text" placeholder="Descrição (ex.: mercado)">
+  <select id="ct"></select>
+  <div class="seg"><button id="cB" class="on m">R$ BRL</button><button id="cU">US$ USD</button></div>
+  <input id="dt" type="date">
+  <button class="go" id="save">Salvar</button>
+ </div></div>
+</div>
+<script type="module">
+import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
+import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,deleteDoc,onSnapshot} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+
+/* COLE AQUI a configuração do seu app web do Firebase (veja o LEIA-ME) */
+const firebaseConfig={
+ apiKey:"AIzaSyBXvPQpA5SAMpnwAAaCnXvtanpBZXLIrmk",
+ authDomain:"financas-do-casal-b4c1f.firebaseapp.com",
+ projectId:"financas-do-casal-b4c1f",
+ storageBucket:"financas-do-casal-b4c1f.firebasestorage.app",
+ messagingSenderId:"1019878675440",
+ appId:"1:1019878675440:web:593c1442d09364818f8335"
+};
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
+const CG=["Moradia","Mercado","Transporte","Saúde","Lazer","Educação","Assinaturas","Impostos","Outros"];
+const CR=["Serviços","Salário","Investimentos","Outros"];
+const $=i=>document.getElementById(i);
+let me=null,T=[],M=new Date(),tp="g",cr="BRL",mine=false,unsub=null;M.setDate(1);
+const f=(v,c)=>new Intl.NumberFormat(c==="BRL"?"pt-BR":"en-US",{style:"currency",currency:c}).format(v);
+const ym=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const nm=u=>{const s=(u.email||"").split("@")[0];return s.charAt(0).toUpperCase()+s.slice(1)};
+function ban(m){const b=$("bn");b.textContent=m;b.style.display=m?"block":"none"}
+function rn(){
+ $("mt").textContent=M.toLocaleDateString("pt-BR",{month:"long",year:"numeric"});
+ const k=ym(M),L=T.filter(t=>t.d&&t.d.startsWith(k)&&(!mine||t.by===me.uid)).sort((a,b)=>b.d.localeCompare(a.d)||b.id.localeCompare(a.id));
+ let h="";
+ ["BRL","USD"].forEach(c=>{const x=L.filter(t=>t.c===c);if(!x.length)return;
+  const r=x.filter(t=>t.t==="r").reduce((s,t)=>s+t.v,0),g=x.filter(t=>t.t==="g").reduce((s,t)=>s+t.v,0);
+  h+=`<div class="card"><div class="cur">${c}</div><div class="row3"><div><div class="l">Recebido</div><div class="v in">${f(r,c)}</div></div><div><div class="l">Gasto</div><div class="v out">${f(g,c)}</div></div><div><div class="l">Saldo</div><div class="v ${r-g<0?"out":""}">${f(r-g,c)}</div></div></div></div>`});
+ $("sum").innerHTML=h;
+ let ch="";
+ ["BRL","USD"].forEach(c=>{const g=L.filter(t=>t.t==="g"&&t.c===c),tot=g.reduce((s,t)=>s+t.v,0);if(!tot)return;
+  const by={};g.forEach(t=>by[t.k]=(by[t.k]||0)+t.v);
+  ch+=`<div class="cur">GASTOS POR CATEGORIA · ${c}</div>`+Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="cat"><div class="t"><span>${esc(k)}</span><span>${f(v,c)}</span></div><div class="bar"><i style="width:${v/tot*100}%"></i></div></div>`).join("")});
+ $("cats").style.display=ch?"block":"none";$("cats").innerHTML=ch;
+ $("list").innerHTML=L.length?L.map(t=>`<div class="tx"><div class="i"><div class="d">${esc(t.s||t.k)}</div><div class="s">${t.d.slice(8)}/${t.d.slice(5,7)} · ${esc(t.k)} · ${t.by===me.uid?"você":esc(t.n||"")}</div></div><div class="v ${t.t==="r"?"in":"out"}">${t.t==="r"?"+":"−"}${f(t.v,t.c)}</div><button class="x" data-id="${esc(t.id)}">✕</button></div>`).join(""):'<div class="em">Nenhum lançamento neste mês. Toque em + para adicionar.</div>';
+}
+function fc(){$("ct").innerHTML=(tp==="g"?CG:CR).map(c=>`<option>${c}</option>`).join("")}
+function ty(x){tp=x;$("bg").className=x==="g"?"on g":"";$("br").className=x==="r"?"on r":"";fc()}
+function cu(c){cr=c;$("cB").className=c==="BRL"?"on m":"";$("cU").className=c==="USD"?"on m":""}
+function cl(){$("sh").classList.remove("on")}
+async function wr(id,data){try{await setDoc(doc(db,"tx",id),data);return true}catch(e){ban("Não foi possível salvar. Verifique a conexão e as regras do Firestore.");return false}}
+$("prev").onclick=()=>{M.setMonth(M.getMonth()-1);rn()};
+$("next").onclick=()=>{M.setMonth(M.getMonth()+1);rn()};
+$("fa").onclick=()=>{mine=false;$("fa").className="on m";$("fm").className="";rn()};
+$("fm").onclick=()=>{mine=true;$("fm").className="on m";$("fa").className="";rn()};
+$("bg").onclick=()=>ty("g");$("br").onclick=()=>ty("r");
+$("cB").onclick=()=>cu("BRL");$("cU").onclick=()=>cu("USD");
+$("fab").onclick=()=>{$("dt").value=new Date().toISOString().slice(0,10);$("vl").value="";$("ds").value="";fc();$("sh").classList.add("on");setTimeout(()=>$("vl").focus(),50)};
+$("sh").onclick=e=>{if(e.target===$("sh"))cl()};
+$("save").onclick=async()=>{const v=parseFloat($("vl").value);if(!(v>0)){$("vl").focus();return}
+ const d=$("dt").value||new Date().toISOString().slice(0,10);
+ const id=Date.now()+"-"+Math.random().toString(36).slice(2,6);
+ const ok=await wr(id,{t:tp,v:Math.round(v*100)/100,s:$("ds").value.trim(),k:$("ct").value,c:cr,d,by:me.uid,n:nm(me)});
+ if(ok){cl();M=new Date(d+"T12:00:00");M.setDate(1);rn()}};
+$("list").onclick=async e=>{const b=e.target.closest(".x");if(!b||!confirm("Excluir este lançamento?"))return;
+ try{await deleteDoc(doc(db,"tx",b.dataset.id))}catch(err){ban("Não foi possível excluir.")}};
+$("imp").onclick=async()=>{
+ const s=prompt("Cole aqui o backup do app antigo:");if(!s)return;
+ let a;try{a=JSON.parse(s);if(!Array.isArray(a))throw 0}catch(e){alert("Backup inválido.");return}
+ let n=0;for(const t of a){if(!t||!(t.v>0)||!t.d)continue;
+  if(await wr("imp"+t.id,{t:t.t==="r"?"r":"g",v:t.v,s:t.s||"",k:t.k||"Outros",c:t.c==="USD"?"USD":"BRL",d:t.d,by:me.uid,n:nm(me)}))n++;else break}
+ alert(n+" lançamentos importados.")};
+$("out").onclick=()=>signOut(auth);
+$("lgo").onclick=async()=>{const err=$("lerr");err.style.display="none";
+ try{await signInWithEmailAndPassword(auth,$("em").value.trim(),$("pw").value)}
+ catch(e){err.textContent="E-mail ou senha incorretos.";err.style.display="block"}};
+$("pw").onkeydown=e=>{if(e.key==="Enter")$("lgo").click()};
+onAuthStateChanged(auth,u=>{
+ if(unsub){unsub();unsub=null}
+ if(!u){me=null;T=[];$("app").style.display="none";$("login").style.display="block";return}
+ me=u;$("login").style.display="none";$("app").style.display="block";ban("");rn();
+ unsub=onSnapshot(collection(db,"tx"),s=>{T=s.docs.map(d=>({id:d.id,...d.data()}));rn()},()=>ban("Sem permissão para ler os dados. Confira as regras do Firestore e o e-mail liberado."));
+});
+if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
+</script>
+</body>
+</html>
