@@ -41,6 +41,8 @@ input,select{width:100%;padding:11px;margin-bottom:8px;border-radius:10px;border
 .em{text-align:center;color:var(--mut);padding:18px}
 .bn{background:var(--card);border:1px solid var(--out);color:var(--out);border-radius:12px;padding:10px;margin-bottom:10px;font-size:14px;display:none}
 #login{display:none;margin-top:12vh}
+.ci{display:flex;align-items:center;gap:6px;padding:8px 0;border-bottom:1px solid var(--bd)}.ci span{flex:1}.ci button{border:0;background:none;color:var(--mut);font-size:18px;padding:6px}
+.hint{text-align:center;font-size:12px;color:var(--mut);margin:-4px 0 4px}
 #app{display:none}
 </style>
 </head>
@@ -62,9 +64,11 @@ input,select{width:100%;padding:11px;margin-bottom:8px;border-radius:10px;border
  <div id="sum"></div>
  <div class="card" id="cats" style="display:none"></div>
  <div class="card" id="list"><div class="em">Carregando…</div></div>
- <div class="sm"><button id="imp">Importar backup antigo</button><button id="out">Sair</button></div>
+ <div class="hint">Toque em um lançamento para editar</div>
+ <div class="sm"><button id="cmenu">Categorias</button><button id="imp">Importar backup antigo</button><button id="out">Sair</button></div>
  <button class="fab" id="fab" aria-label="Novo lançamento">+</button>
  <div class="sh" id="sh"><div class="fm">
+  <div class="cur" id="ft" style="font-size:14px;margin-bottom:8px"></div>
   <div class="seg"><button id="bg" class="on g">Gasto</button><button id="br">Recebimento</button></div>
   <input id="vl" type="number" inputmode="decimal" step="0.01" placeholder="Valor">
   <input id="ds" type="text" placeholder="Descrição (ex.: mercado)">
@@ -74,10 +78,17 @@ input,select{width:100%;padding:11px;margin-bottom:8px;border-radius:10px;border
   <button class="go" id="save">Salvar</button>
  </div></div>
 </div>
+<div class="sh" id="csh"><div class="fm">
+ <div class="cur" style="font-size:14px;margin-bottom:8px">Categorias (compartilhadas entre vocês)</div>
+ <div class="seg"><button id="ctg" class="on g">Gastos</button><button id="ctr">Recebimentos</button></div>
+ <div id="clist" style="max-height:40vh;overflow:auto"></div>
+ <div style="display:flex;gap:8px;margin-top:8px"><input id="cn" placeholder="Nova categoria" style="margin:0"><button class="go" id="cadd" style="width:auto;padding:0 18px">+</button></div>
+ <button id="cclose" class="go" style="margin-top:10px;background:var(--card);color:var(--tx);border:1px solid var(--bd)">Fechar</button>
+</div></div>
 <script type="module">
 import {initializeApp} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js";
 import {getAuth,onAuthStateChanged,signInWithEmailAndPassword,signOut} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js";
-import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,deleteDoc,onSnapshot} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
+import {initializeFirestore,persistentLocalCache,persistentMultipleTabManager,collection,doc,setDoc,deleteDoc,onSnapshot,writeBatch} from "https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore.js";
 
 /* COLE AQUI a configuração do seu app web do Firebase (veja o LEIA-ME) */
 const firebaseConfig={
@@ -92,10 +103,11 @@ const firebaseConfig={
 const app=initializeApp(firebaseConfig);
 const auth=getAuth(app);
 const db=initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentMultipleTabManager()})});
-const CG=["Moradia","Mercado","Transporte","Saúde","Lazer","Educação","Assinaturas","Impostos","Outros"];
-const CR=["Serviços","Salário","Investimentos","Outros"];
+const DG=["Moradia","Mercado","Transporte","Saúde","Lazer","Educação","Assinaturas","Impostos","Outros"];
+const DR=["Serviços","Salário","Investimentos","Outros"];
+let G=[...DG],R=[...DR];
 const $=i=>document.getElementById(i);
-let me=null,T=[],M=new Date(),tp="g",cr="BRL",mine=false,unsub=null;M.setDate(1);
+let me=null,T=[],M=new Date(),tp="g",cr="BRL",mine=false,unsub=null,unsubC=null,eid=null,eo=null,ek=null,ctp="g";M.setDate(1);
 const f=(v,c)=>new Intl.NumberFormat(c==="BRL"?"pt-BR":"en-US",{style:"currency",currency:c}).format(v);
 const ym=d=>d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -114,9 +126,9 @@ function rn(){
   const by={};g.forEach(t=>by[t.k]=(by[t.k]||0)+t.v);
   ch+=`<div class="cur">GASTOS POR CATEGORIA · ${c}</div>`+Object.entries(by).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`<div class="cat"><div class="t"><span>${esc(k)}</span><span>${f(v,c)}</span></div><div class="bar"><i style="width:${v/tot*100}%"></i></div></div>`).join("")});
  $("cats").style.display=ch?"block":"none";$("cats").innerHTML=ch;
- $("list").innerHTML=L.length?L.map(t=>`<div class="tx"><div class="i"><div class="d">${esc(t.s||t.k)}</div><div class="s">${t.d.slice(8)}/${t.d.slice(5,7)} · ${esc(t.k)} · ${t.by===me.uid?"você":esc(t.n||"")}</div></div><div class="v ${t.t==="r"?"in":"out"}">${t.t==="r"?"+":"−"}${f(t.v,t.c)}</div><button class="x" data-id="${esc(t.id)}">✕</button></div>`).join(""):'<div class="em">Nenhum lançamento neste mês. Toque em + para adicionar.</div>';
+ $("list").innerHTML=L.length?L.map(t=>`<div class="tx" data-id="${esc(t.id)}"><div class="i"><div class="d">${esc(t.s||t.k)}</div><div class="s">${t.d.slice(8)}/${t.d.slice(5,7)} · ${esc(t.k)} · ${t.by===me.uid?"você":esc(t.n||"")}</div></div><div class="v ${t.t==="r"?"in":"out"}">${t.t==="r"?"+":"−"}${f(t.v,t.c)}</div><button class="x" data-id="${esc(t.id)}">✕</button></div>`).join(""):'<div class="em">Nenhum lançamento neste mês. Toque em + para adicionar.</div>';
 }
-function fc(){$("ct").innerHTML=(tp==="g"?CG:CR).map(c=>`<option>${c}</option>`).join("")}
+function fc(){const L=(tp==="g"?G:R).slice();if(ek&&!L.includes(ek))L.push(ek);$("ct").innerHTML=L.map(c=>`<option>${esc(c)}</option>`).join("")}
 function ty(x){tp=x;$("bg").className=x==="g"?"on g":"";$("br").className=x==="r"?"on r":"";fc()}
 function cu(c){cr=c;$("cB").className=c==="BRL"?"on m":"";$("cU").className=c==="USD"?"on m":""}
 function cl(){$("sh").classList.remove("on")}
@@ -127,15 +139,45 @@ $("fa").onclick=()=>{mine=false;$("fa").className="on m";$("fm").className="";rn
 $("fm").onclick=()=>{mine=true;$("fm").className="on m";$("fa").className="";rn()};
 $("bg").onclick=()=>ty("g");$("br").onclick=()=>ty("r");
 $("cB").onclick=()=>cu("BRL");$("cU").onclick=()=>cu("USD");
-$("fab").onclick=()=>{$("dt").value=new Date().toISOString().slice(0,10);$("vl").value="";$("ds").value="";fc();$("sh").classList.add("on");setTimeout(()=>$("vl").focus(),50)};
+$("fab").onclick=()=>openForm(null);
 $("sh").onclick=e=>{if(e.target===$("sh"))cl()};
 $("save").onclick=async()=>{const v=parseFloat($("vl").value);if(!(v>0)){$("vl").focus();return}
  const d=$("dt").value||new Date().toISOString().slice(0,10);
- const id=Date.now()+"-"+Math.random().toString(36).slice(2,6);
- const ok=await wr(id,{t:tp,v:Math.round(v*100)/100,s:$("ds").value.trim(),k:$("ct").value,c:cr,d,by:me.uid,n:nm(me)});
- if(ok){cl();M=new Date(d+"T12:00:00");M.setDate(1);rn()}};
-$("list").onclick=async e=>{const b=e.target.closest(".x");if(!b||!confirm("Excluir este lançamento?"))return;
- try{await deleteDoc(doc(db,"tx",b.dataset.id))}catch(err){ban("Não foi possível excluir.")}};
+ const id=eid||(Date.now()+"-"+Math.random().toString(36).slice(2,6));
+ const data={t:tp,v:Math.round(v*100)/100,s:$("ds").value.trim(),k:$("ct").value,c:cr,d,by:eo?(eo.by||me.uid):me.uid,n:eo?(eo.n||""):nm(me)};
+ if(await wr(id,data)){cl();M=new Date(d+"T12:00:00");M.setDate(1);rn()}};
+$("list").onclick=async e=>{const row=e.target.closest(".tx");if(!row)return;const id=row.dataset.id;
+ if(e.target.closest(".x")){if(!confirm("Excluir este lançamento?"))return;
+  try{await deleteDoc(doc(db,"tx",id))}catch(err){ban("Não foi possível excluir.")}return}
+ const t=T.find(x=>x.id===id);if(t)openForm(t)};
+function openForm(t){eid=t?t.id:null;eo=t||null;ek=t?t.k:null;tp=t?t.t:"g";cr=t?t.c:"BRL";ty(tp);cu(cr);
+ $("ft").textContent=t?"Editar lançamento":"Novo lançamento";
+ $("dt").value=t?t.d:new Date().toISOString().slice(0,10);$("vl").value=t?t.v:"";$("ds").value=t?(t.s||""):"";
+ if(t)$("ct").value=t.k;
+ $("sh").classList.add("on");setTimeout(()=>{if(!t)$("vl").focus()},50)}
+function rc(){const L=ctp==="g"?G:R;
+ $("clist").innerHTML=L.map((c,i)=>`<div class="ci"><span>${esc(c)}</span><button data-e="${i}" aria-label="Renomear">✎</button><button data-d="${i}" aria-label="Excluir">✕</button></div>`).join("")||'<div class="em">Nenhuma categoria.</div>';
+ $("ctg").className=ctp==="g"?"on g":"";$("ctr").className=ctp==="r"?"on r":""}
+async function sc(){try{await setDoc(doc(db,"config","categorias"),{g:G,r:R});return true}catch(e){alert("Não foi possível salvar as categorias. Confira se as regras do Firestore foram atualizadas.");return false}}
+$("cmenu").onclick=()=>{ctp="g";rc();$("csh").classList.add("on")};
+$("cclose").onclick=()=>$("csh").classList.remove("on");
+$("csh").onclick=e=>{if(e.target===$("csh"))$("csh").classList.remove("on")};
+$("ctg").onclick=()=>{ctp="g";rc()};$("ctr").onclick=()=>{ctp="r";rc()};
+$("cadd").onclick=async()=>{const n=$("cn").value.trim(),L=ctp==="g"?G:R;
+ if(!n||L.some(c=>c.toLowerCase()===n.toLowerCase()))return;
+ L.push(n);if(await sc()){$("cn").value="";rc()}else L.pop()};
+$("clist").onclick=async e=>{const L=ctp==="g"?G:R,be=e.target.closest("[data-e]"),bd=e.target.closest("[data-d]");
+ if(be){const i=+be.dataset.e,old=L[i],n=(prompt("Novo nome da categoria:",old)||"").trim();
+  if(!n||n===old)return;
+  if(L.some((c,j)=>j!==i&&c.toLowerCase()===n.toLowerCase())){alert("Já existe uma categoria com esse nome.");return}
+  L[i]=n;if(!await sc()){L[i]=old;return}
+  const aff=T.filter(t=>t.t===ctp&&t.k===old);
+  for(let k=0;k<aff.length;k+=400){const b=writeBatch(db);aff.slice(k,k+400).forEach(t=>b.update(doc(db,"tx",t.id),{k:n}));
+   try{await b.commit()}catch(err){alert("Categoria renomeada, mas alguns lançamentos não foram atualizados.");break}}
+  rc()}
+ else if(bd){const i=+bd.dataset.d;
+  if(!confirm('Excluir a categoria "'+L[i]+'"? Os lançamentos já feitos continuam com esse nome.'))return;
+  const old=L.splice(i,1)[0];if(!await sc())L.splice(i,0,old);rc()}};
 $("imp").onclick=async()=>{
  const s=prompt("Cole aqui o backup do app antigo:");if(!s)return;
  let a;try{a=JSON.parse(s);if(!Array.isArray(a))throw 0}catch(e){alert("Backup inválido.");return}
@@ -148,9 +190,10 @@ $("lgo").onclick=async()=>{const err=$("lerr");err.style.display="none";
  catch(e){err.textContent="E-mail ou senha incorretos.";err.style.display="block"}};
 $("pw").onkeydown=e=>{if(e.key==="Enter")$("lgo").click()};
 onAuthStateChanged(auth,u=>{
- if(unsub){unsub();unsub=null}
- if(!u){me=null;T=[];$("app").style.display="none";$("login").style.display="block";return}
+ if(unsub){unsub();unsub=null}if(unsubC){unsubC();unsubC=null}
+ if(!u){me=null;T=[];G=[...DG];R=[...DR];$("app").style.display="none";$("login").style.display="block";return}
  me=u;$("login").style.display="none";$("app").style.display="block";ban("");rn();
+ unsubC=onSnapshot(doc(db,"config","categorias"),s=>{if(s.exists()){const d=s.data();if(Array.isArray(d.g))G=d.g;if(Array.isArray(d.r))R=d.r}else{G=[...DG];R=[...DR]}if($("csh").classList.contains("on"))rc()},()=>{});
  unsub=onSnapshot(collection(db,"tx"),s=>{T=s.docs.map(d=>({id:d.id,...d.data()}));rn()},()=>ban("Sem permissão para ler os dados. Confira as regras do Firestore e o e-mail liberado."));
 });
 if("serviceWorker" in navigator)navigator.serviceWorker.register("sw.js").catch(()=>{});
